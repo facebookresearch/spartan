@@ -1,0 +1,15 @@
+name: spartan
+channels:
+  - pytorch
+  - default
+  - conda-forge
+dependencies:
+  - python=3.9
+  - pip
+  - cudatoolkit=11.6
+  - pytorch=1.12.1
+  - torchvision=0.13.1
+  - pip:
+    - omegaconf==2.2.3
+    - timm==0.6.5
+    - webdataset==0.1.103
