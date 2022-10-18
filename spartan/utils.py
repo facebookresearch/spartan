@@ -4,7 +4,7 @@
 # This source code is licensed under the license found in the
 # LICENSE file in the root directory of this source tree.
 
-from typing import Sequence, Union
+from typing import Sequence, Tuple, Union
 import itertools
 import logging
 import numpy as np
@@ -28,7 +28,9 @@ def get_logger(name, level=logging.INFO):
 
 def normalize_block_dims(
     block_dims: Union[int, Sequence[int]], tensor: Tensor, strict: bool = False
-):
+) -> Tuple:
+    """Validates that tensor dimensions are divisible by the block dimensions.
+    Replaces block dimensions set to -1 with the size of the corresponding tensor dimension."""
     if type(block_dims) is int:
         block_dims = [block_dims] * tensor.ndim
 
@@ -55,7 +57,8 @@ def normalize_block_dims(
     return block_dims
 
 
-def tensor_to_blocks(input: Tensor, block_dims: Union[int, Sequence[int]]):
+def tensor_to_blocks(input: Tensor, block_dims: Union[int, Sequence[int]]) -> Tensor:
+    """Converts the input tensor to a collection of blocks with the given block dimensions."""
     outer_dims = [d // k for d, k in zip(input.shape, block_dims)]
     dims = itertools.chain.from_iterable(zip(outer_dims, block_dims))
     order = itertools.chain(range(0, 2 * input.ndim, 2), range(1, 2 * input.ndim + 1, 2))
@@ -63,7 +66,8 @@ def tensor_to_blocks(input: Tensor, block_dims: Union[int, Sequence[int]]):
     return blocks
 
 
-def blocks_to_tensor(blocks: Tensor):
+def blocks_to_tensor(blocks: Tensor) -> Tensor:
+    """Converts a collection of blocks to a flattened tensor. Inverse of `tensor_to_blocks()`."""
     n = blocks.ndim // 2
     order = itertools.chain.from_iterable(zip(range(n), range(n, 2 * n)))
     dims = [blocks.shape[i] * blocks.shape[i + n] for i in range(n)]
@@ -73,7 +77,8 @@ def blocks_to_tensor(blocks: Tensor):
 
 def compute_block_values(
     values: Tensor, block_dims: Union[int, Sequence[int]], reduction: str = "sum"
-):
+) -> Tensor:
+    """Computes a reduction over each block of a tensor."""
     block_dims = normalize_block_dims(block_dims, values)
     if block_dims == tuple(1 for _ in range(values.ndim)):
         return values
@@ -88,7 +93,8 @@ def compute_block_values(
     return block_values
 
 
-def mask_blocks(tensor: Tensor, block_mask: Tensor):
+def mask_blocks(tensor: Tensor, block_mask: Tensor) -> Tensor:
+    """Masks the tensor with the given block mask values."""
     block_dims = [t // b for t, b in zip(tensor.shape, block_mask.shape)]
     blocks = tensor_to_blocks(tensor, block_dims)
     remaining_dims = [1] * tensor.ndim
@@ -97,7 +103,9 @@ def mask_blocks(tensor: Tensor, block_mask: Tensor):
     return masked_mat
 
 
-def mask_tensor(tensor: Tensor, mask: Tensor):
+def mask_tensor(tensor: Tensor, mask: Tensor) -> Tensor:
+    """Masks the tensor with the given mask. The mask tensor can either be a
+    regular mask of the same shape as `tensor` or a block mask."""
     if tensor.shape != mask.shape:
         return mask_blocks(tensor, mask)
     return tensor * mask
